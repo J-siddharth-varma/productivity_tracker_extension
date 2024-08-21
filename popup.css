@@ -1,0 +1,32 @@
+body {
+  font-family: 'Arial', sans-serif;
+  background-color: white;
+  color: black;
+  text-align: center;
+  margin: 0;
+  padding: 20px;
+  border: 5px solid green; /* Border around the popup */
+  border-radius: 10px; /* Rounded corners */
+  width: 200px; /* Fixed width */
+}
+
+h1 {
+  font-size: 2.5em; /* Larger font size for the timer */
+  margin: 0;
+  padding: 10px 0;
+}
+
+button {
+  padding: 10px 20px;
+  font-size: 1em;
+  border: 2px solid green; /* Border for the button */
+  background-color: white; /* Button background */
+  color: green; /* Button text color */
+  border-radius: 5px; /* Rounded button corners */
+  cursor: pointer; /* Pointer cursor on hover */
+}
+
+button:hover {
+  background-color: green; /* Change background on hover */
+  color: white; /* Change text color on hover */
+}
