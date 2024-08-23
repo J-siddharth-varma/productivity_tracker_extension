@@ -5,24 +5,37 @@ function formatTime(seconds) {
     return `${hours}h ${minutes}m ${remainingSeconds}s`;
 }
 
+function secondsToHours(seconds) {
+    return seconds / 3600;
+}
+
+function getDomainFromUrl(url) {
+    try {
+        const urlObj = new URL(url);
+        return urlObj.hostname;
+    } catch (e) {
+        return url; // Return the original string if it's not a valid URL
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     chrome.storage.local.get('trackedUrls', function(result) {
         const trackedUrls = result.trackedUrls || {};
         const data = Object.entries(trackedUrls)
             .sort((a, b) => b[1] - a[1]); // Sort by time spent, descending
 
-        const labels = data.map(item => item[0]);
-        const timeSpent = data.map(item => item[1]);
+        const labels = data.slice(0, 10).map(item => getDomainFromUrl(item[0]));
+        const timeSpent = data.slice(0, 10).map(item => secondsToHours(item[1]));
 
         // Create the chart
         const ctx = document.getElementById('statsChart').getContext('2d');
         new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: labels.slice(0, 10), // Top 10 for the chart
+                labels: labels,
                 datasets: [{
                     label: 'Time Spent',
-                    data: timeSpent.slice(0, 10), // Top 10 for the chart
+                    data: timeSpent,
                     backgroundColor: 'rgba(75, 192, 192, 0.6)',
                     borderColor: 'rgba(75, 192, 192, 1)',
                     borderWidth: 1
@@ -30,12 +43,18 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 scales: {
                     y: {
                         beginAtZero: true,
                         title: {
                             display: true,
-                            text: 'Time (seconds)'
+                            text: 'Time (hours)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value.toFixed(2) + 'h';
+                            }
                         }
                     },
                     x: {
@@ -52,7 +71,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                return formatTime(context.raw);
+                                const hours = context.raw;
+                                const totalSeconds = Math.round(hours * 3600);
+                                return formatTime(totalSeconds);
                             }
                         }
                     }
@@ -67,6 +88,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const cellUrl = row.insertCell(0);
             const cellTime = row.insertCell(1);
             cellUrl.textContent = url;
+            cellUrl.className = 'url-cell';
+            cellUrl.title = url; // Add tooltip for full URL
             cellTime.textContent = formatTime(time);
         });
     });

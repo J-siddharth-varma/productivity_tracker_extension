@@ -4,22 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Browsing Statistics</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="chart.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
         }
         #chart-container {
             width: 100%;
             height: 400px;
+            margin-bottom: 30px;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
         }
         th, td {
             border: 1px solid #ddd;
@@ -28,6 +28,12 @@
         }
         th {
             background-color: #f2f2f2;
+        }
+        .url-cell {
+            max-width: 500px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
     </style>
 </head>
@@ -39,7 +45,7 @@
     <table id="statsTable">
         <thead>
             <tr>
-                <th>Website</th>
+                <th>Website URL</th>
                 <th>Time Spent</th>
             </tr>
         </thead>

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Minimalist Time Tracker",
   "version": "1.0",
-  "description": "Track time spent on websites you visit and see your browsing statistics in a chart",
+  "description": "Track time spent on websites with a minimalist design",
   "permissions": [
     "storage",
     "tabs",
@@ -21,7 +21,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["stats.html", "stats.js"],
+      "resources": ["chart.js"],
       "matches": ["<all_urls>"]
     }
   ]
