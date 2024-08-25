@@ -21,7 +21,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["chart.js", "stats.css"],
+      "resources": ["chart.js", "stats.css", "blocked.html"],
       "matches": ["<all_urls>"]
     }
   ],

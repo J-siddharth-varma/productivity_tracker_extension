@@ -93,3 +93,26 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true;
     }
 });
+
+function checkTimeLimits() {
+    chrome.storage.local.get(['trackedUrls', 'urlSettings'], (result) => {
+        const trackedUrls = result.trackedUrls || {};
+        const urlSettings = result.urlSettings || {};
+
+        for (const [url, timeSpent] of Object.entries(trackedUrls)) {
+            const setting = urlSettings[url];
+            if (setting && setting.action === 'time-limit' && setting.timeLimit) {
+                if (timeSpent >= setting.timeLimit) {
+                    chrome.tabs.query({url: `*://${url}/*`}, (tabs) => {
+                        tabs.forEach((tab) => {
+                            chrome.tabs.update(tab.id, {url: 'blocked.html'});
+                        });
+                    });
+                }
+            }
+        }
+    });
+}
+
+// Call checkTimeLimits every minute
+setInterval(checkTimeLimits, 60000);

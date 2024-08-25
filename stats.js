@@ -92,37 +92,6 @@ function formatTime(seconds) {
     return `${hours}h ${minutes}m ${secs}s`;
 }
 
-function populateTable(labels, urlSettings, trackedUrls) {
-    const tableBody = document.querySelector('#statsTable tbody');
-    tableBody.innerHTML = '';
-
-    labels.forEach((url, index) => {
-        const row = tableBody.insertRow();
-        row.insertCell(0).textContent = index + 1;
-        row.insertCell(1).textContent = url;
-        
-        const limitationCell = row.insertCell(2);
-        const select = document.createElement('select');
-        select.innerHTML = `
-            <option value="none">None</option>
-            <option value="ignore">Ignore</option>
-            <option value="time-limit">Time-limit</option>
-        `;
-        select.value = urlSettings[url]?.action || 'none';
-        select.addEventListener('change', (event) => {
-            updateUrlSettings(url, event.target.value);
-        });
-        limitationCell.appendChild(select);
-
-        const deleteCell = row.insertCell(3);
-        const deleteButton = document.createElement('button');
-        deleteButton.textContent = 'Delete';
-        deleteButton.classList.add('delete-btn');
-        deleteButton.addEventListener('click', () => deleteWebsite(url));
-        deleteCell.appendChild(deleteButton);
-    });
-}
-
 function deleteWebsite(url) {
     console.log('Attempting to delete:', url);
     if (confirm(`Are you sure you want to delete ${url} from the tracking list?`)) {
@@ -198,6 +167,45 @@ function updateUrlSettings(url, action) {
             console.log('Settings updated for', url);
             updateStatsPage();
         });
+    });
+}
+
+function populateTable(labels, urlSettings, trackedUrls) {
+    const tableBody = document.querySelector('#statsTable tbody');
+    tableBody.innerHTML = '';
+
+    labels.forEach((url, index) => {
+        const row = tableBody.insertRow();
+        row.insertCell(0).textContent = index + 1;
+        row.insertCell(1).textContent = url;
+        
+        const limitationCell = row.insertCell(2);
+        const select = document.createElement('select');
+        select.innerHTML = `
+            <option value="none">None</option>
+            <option value="ignore">Ignore</option>
+            <option value="time-limit">Time-limit</option>
+        `;
+        select.value = urlSettings[url]?.action || 'none';
+        select.addEventListener('change', (event) => {
+            updateUrlSettings(url, event.target.value);
+        });
+        limitationCell.appendChild(select);
+
+        // Display current limitation
+        const limitationInfo = document.createElement('span');
+        limitationInfo.style.marginLeft = '10px';
+        if (urlSettings[url]?.action === 'time-limit' && urlSettings[url]?.timeLimit) {
+            limitationInfo.textContent = `(${formatTime(urlSettings[url].timeLimit)})`;
+        }
+        limitationCell.appendChild(limitationInfo);
+
+        const deleteCell = row.insertCell(3);
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Delete';
+        deleteButton.classList.add('delete-btn');
+        deleteButton.addEventListener('click', () => deleteWebsite(url));
+        deleteCell.appendChild(deleteButton);
     });
 }
 
