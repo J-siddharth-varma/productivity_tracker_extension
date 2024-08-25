@@ -160,9 +160,15 @@ function updateUrlSettings(url, action) {
         urlSettings[url] = { action: action };
         
         if (action === 'time-limit') {
-            const timeLimit = prompt("Enter time limit in minutes:");
+            const timeLimit = prompt("Enter time limit in format HH:MM:SS:");
             if (timeLimit) {
-                urlSettings[url].timeLimit = parseInt(timeLimit) * 60; // Convert to seconds
+                const seconds = parseTimeLimit(timeLimit);
+                if (seconds !== null) {
+                    urlSettings[url].timeLimit = seconds;
+                } else {
+                    alert("Invalid time format. Please use HH:MM:SS.");
+                    urlSettings[url].action = 'none';
+                }
             } else {
                 urlSettings[url].action = 'none';
             }
@@ -171,9 +177,6 @@ function updateUrlSettings(url, action) {
             if (!trackedUrls.hasOwnProperty(url)) {
                 trackedUrls[url] = 0;
             }
-        } else if (action === 'none' && urlSettings[url].action === 'ignore') {
-            // If un-ignoring, reset the tracked time to 0
-            trackedUrls[url] = 0;
         }
 
         chrome.storage.local.set({ urlSettings: urlSettings, trackedUrls: trackedUrls }, () => {
@@ -181,6 +184,32 @@ function updateUrlSettings(url, action) {
             updateStatsPage();
         });
     });
+}
+
+function parseTimeLimit(timeString) {
+    const parts = timeString.split(':');
+    if (parts.length !== 3) {
+        return null;
+    }
+    const hours = parseInt(parts[0], 10);
+    const minutes = parseInt(parts[1], 10);
+    const seconds = parseInt(parts[2], 10);
+    
+    if (isNaN(hours) || isNaN(minutes) || isNaN(seconds) ||
+        minutes >= 60 || seconds >= 60) {
+        return null;
+    }
+    
+    return hours * 3600 + minutes * 60 + seconds;
+}
+
+function formatTimeLimit(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return [hours, minutes, secs]
+        .map(v => v < 10 ? "0" + v : v)
+        .join(":");
 }
 
 function populateTable(labels, urlSettings, trackedUrls) {
@@ -208,6 +237,8 @@ function populateTable(labels, urlSettings, trackedUrls) {
         const timeCell = row.insertCell(3);
         if (urlSettings[url]?.action === 'ignore') {
             timeCell.textContent = 'Ignored';
+        } else if (urlSettings[url]?.action === 'time-limit') {
+            timeCell.textContent = `${formatTime(trackedUrls[url] || 0)} / ${formatTimeLimit(urlSettings[url].timeLimit)}`;
         } else {
             timeCell.textContent = formatTime(trackedUrls[url] || 0);
         }
