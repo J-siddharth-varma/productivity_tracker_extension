@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Minimalist Time Tracker",
+  "name": "Time Tracker",
   "version": "1.0",
   "description": "Track time spent on websites with a minimalist design",
   "permissions": [
@@ -21,8 +21,11 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["chart.js"],
+      "resources": ["chart.js", "stats.css"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
 }

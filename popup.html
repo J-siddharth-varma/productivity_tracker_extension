@@ -4,34 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Time Tracker</title>
-  <style>
-    body {
-      width: 200px;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 10px;
-    }
-    button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    #timer {
-      font-size: 18px;
-      font-weight: bold;
-      margin: 10px 0;
-    }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <h2>Time Tracker</h2>
-  <p>Track your browsing time</p>
-  <div id="timer">00:00:00</div>
-  <button id="viewStats">View Statistics</button>
+  <div class="container">
+    <h1>Time Tracker</h1>
+    <div id="timer" class="timer">00:00:00</div>
+    <button id="viewStats" class="btn">View Statistics</button>
+  </div>
   <script src="popup.js"></script>
 </body>
 </html>

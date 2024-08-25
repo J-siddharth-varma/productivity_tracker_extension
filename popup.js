@@ -24,6 +24,8 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-window.addEventListener('unload', function() {
-  clearInterval(timerInterval);
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "timeUpdate") {
+    document.getElementById('timer').textContent = formatTime(message.timeSpent);
+  }
 });
