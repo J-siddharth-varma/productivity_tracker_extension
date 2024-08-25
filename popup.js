@@ -1,31 +1,51 @@
-let timerInterval;
-
-function formatTime(seconds) {
-  const hours = Math.floor(seconds / 3600).toString().padStart(2, '0');
-  const minutes = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
-  const secs = (seconds % 60).toString().padStart(2, '0');
-  return `${hours}:${minutes}:${secs}`;
-}
+let currentUrl = '';
+let intervalId;
 
 function updateTimer() {
-  chrome.runtime.sendMessage({action: "getTimeForCurrentUrl"}, (response) => {
-    if (response && response.timeSpent !== undefined) {
-      document.getElementById('timer').textContent = formatTime(response.timeSpent);
-    }
-  });
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+        if (tabs[0] && tabs[0].url) {
+            try {
+                const url = new URL(tabs[0].url);
+                const hostname = url.hostname;
+                if (hostname !== currentUrl) {
+                    currentUrl = hostname;
+                    updateTimerDisplay();
+                }
+            } catch (error) {
+                console.error("Invalid URL:", tabs[0].url);
+            }
+        }
+    });
+}
+
+function updateTimerDisplay() {
+    chrome.storage.local.get(['trackedUrls'], function(result) {
+        const trackedUrls = result.trackedUrls || {};
+        const timeSpent = trackedUrls[currentUrl] || 0;
+        const timerElement = document.getElementById('timer');
+        timerElement.textContent = formatTime(timeSpent);
+    });
+}
+
+function formatTime(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return [hours, minutes, secs]
+        .map(v => v < 10 ? "0" + v : v)
+        .join(":");
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  updateTimer();
-  timerInterval = setInterval(updateTimer, 1000);
-  
-  document.getElementById('viewStats').addEventListener('click', () => {
-    chrome.tabs.create({ url: 'stats.html' });
-  });
+    updateTimer();
+    intervalId = setInterval(updateTimerDisplay, 1000);
+
+    document.getElementById('viewStats').addEventListener('click', function() {
+        chrome.tabs.create({url: 'stats.html'});
+    });
 });
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === "timeUpdate") {
-    document.getElementById('timer').textContent = formatTime(message.timeSpent);
-  }
+// Stop the interval when the popup is closed
+window.addEventListener('unload', function() {
+    clearInterval(intervalId);
 });

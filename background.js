@@ -1,118 +1,167 @@
 let trackedUrls = {};
+let urlSettings = {};
 let currentUrl = null;
 let startTime = null;
-let urlSettings = {};
+let intervalId = null;
 
 // Load tracked URLs and settings from storage when the extension starts
 chrome.storage.local.get(['trackedUrls', 'urlSettings'], (result) => {
-  if (result.trackedUrls) {
-    trackedUrls = result.trackedUrls;
-  }
-  if (result.urlSettings) {
-    urlSettings = result.urlSettings;
-  }
+  trackedUrls = result.trackedUrls || {};
+  urlSettings = result.urlSettings || {};
+  console.log('Loaded trackedUrls:', trackedUrls);
+  console.log('Loaded urlSettings:', urlSettings);
 });
 
-function shouldTrackUrl(url) {
-    return !urlSettings[url] || urlSettings[url].action !== 'ignore';
+function updateTimeSpent() {
+  if (currentUrl) {
+    const now = Date.now();
+    const timeSpent = Math.round((now - startTime) / 1000);
+    trackedUrls[currentUrl] = (trackedUrls[currentUrl] || 0) + timeSpent;
+    startTime = now;  // Reset startTime for the next interval
+
+    chrome.storage.local.set({ trackedUrls: trackedUrls }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('Error updating storage:', chrome.runtime.lastError);
+      } else {
+        console.log(`Updated time for ${currentUrl}: ${trackedUrls[currentUrl]} seconds`);
+      }
+    });
+
+    // Check if time limit is reached
+    const setting = urlSettings[currentUrl];
+    if (setting && setting.action === 'time-limit' && setting.timeLimit) {
+      if (trackedUrls[currentUrl] >= setting.timeLimit) {
+        blockWebsite(currentUrl);
+      }
+    }
+  }
 }
 
-function updateTimeSpent() {
-  if (currentUrl && startTime && !urlSettings[currentUrl]?.ignore) {
-    const timeSpent = Math.round((Date.now() - startTime) / 1000);
-    trackedUrls[currentUrl] = (trackedUrls[currentUrl] || 0) + timeSpent;
-    chrome.storage.local.set({ trackedUrls: trackedUrls });
+function blockWebsite(url) {
+  chrome.tabs.query({url: `*://${url}/*`}, (tabs) => {
+    tabs.forEach((tab) => {
+      chrome.tabs.update(tab.id, {url: chrome.runtime.getURL('blocked.html')});
+    });
+  });
+}
 
-    chrome.runtime.sendMessage({
-      action: "timeUpdate",
-      url: currentUrl,
-      timeSpent: trackedUrls[currentUrl]
-    }).catch(error => {
-      // Ignore "Receiving end does not exist" errors
-      if (error.message !== "Could not establish connection. Receiving end does not exist.") {
-        console.error("Error sending timeUpdate message:", error);
+function unblockWebsite(url) {
+  chrome.tabs.query({url: chrome.runtime.getURL('blocked.html')}, (tabs) => {
+    tabs.forEach((tab) => {
+      chrome.tabs.update(tab.id, {url: `https://${url}`});
+    });
+  });
+}
+
+function startTracking(url) {
+  if (url !== currentUrl) {
+    stopTracking();
+    currentUrl = url;
+    startTime = Date.now();
+    console.log('Started tracking:', url);
+    if (!intervalId) {
+      intervalId = setInterval(updateTimeSpent, 1000); // Update every second
+    }
+  }
+}
+
+function stopTracking() {
+  if (currentUrl) {
+    updateTimeSpent();
+    console.log('Stopped tracking:', currentUrl);
+    currentUrl = null;
+    startTime = null;
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
+    }
+  }
+}
+
+function safeExecute(callback) {
+  try {
+    callback();
+  } catch (error) {
+    console.error('Error executing callback:', error);
+  }
+}
+
+chrome.tabs.onActivated.addListener((activeInfo) => {
+  safeExecute(() => {
+    chrome.tabs.get(activeInfo.tabId, (tab) => {
+      if (chrome.runtime.lastError) {
+        console.error('Error getting tab:', chrome.runtime.lastError);
+        return;
+      }
+      try {
+        const url = new URL(tab.url);
+        startTracking(url.hostname);
+      } catch (error) {
+        console.error("Invalid URL:", tab.url);
+        stopTracking();
+      }
+    });
+  });
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete') {
+    safeExecute(() => {
+      try {
+        const url = new URL(tab.url);
+        startTracking(url.hostname);
+      } catch (error) {
+        console.error("Invalid URL:", tab.url);
+        stopTracking();
       }
     });
   }
-  startTime = Date.now();
-}
+});
 
-// Set up interval to periodically update time spent
-setInterval(updateTimeSpent, 1000);
-
-// Update active tab tracking
-chrome.tabs.onActivated.addListener((activeInfo) => {
-  chrome.tabs.get(activeInfo.tabId, (tab) => {
-    updateTimeSpent();
-    try {
-      const url = new URL(tab.url);
-      currentUrl = url.hostname;
-      console.log("Current URL set to:", currentUrl);
-      startTime = Date.now();
-    } catch (error) {
-      console.error("Invalid URL:", tab.url);
-      currentUrl = null;
-      startTime = null;
+chrome.windows.onFocusChanged.addListener((windowId) => {
+  safeExecute(() => {
+    if (windowId === chrome.windows.WINDOW_ID_NONE) {
+      stopTracking();
+    } else {
+      chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+        if (chrome.runtime.lastError) {
+          console.error('Error querying tabs:', chrome.runtime.lastError);
+          return;
+        }
+        if (tabs[0]) {
+          try {
+            const url = new URL(tabs[0].url);
+            startTracking(url.hostname);
+          } catch (error) {
+            console.error("Invalid URL:", tabs[0].url);
+            stopTracking();
+          }
+        }
+      });
     }
   });
 });
 
-// Track URL changes within the same tab
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.status === 'complete') {
-        updateTimeSpent();
-        currentUrl = new URL(tab.url).hostname;
-        if (shouldTrackUrl(currentUrl)) {
-            startTime = Date.now();
-        } else {
-            startTime = null;
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === 'local') {
+    if (changes.urlSettings) {
+      urlSettings = changes.urlSettings.newValue;
+      console.log('Updated urlSettings:', urlSettings);
+      // Check if any blocked websites need to be unblocked
+      for (const [url, setting] of Object.entries(urlSettings)) {
+        if (setting.action !== 'time-limit' || !setting.timeLimit) {
+          unblockWebsite(url);
         }
+      }
     }
+    if (changes.trackedUrls) {
+      trackedUrls = changes.trackedUrls.newValue;
+      console.log('Updated trackedUrls:', trackedUrls);
+    }
+  }
 });
 
-// Listen for messages from popup or stats page
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "getTimeForCurrentUrl") {
-        sendResponse({ timeSpent: trackedUrls[currentUrl] || 0 });
-        return true;
-    } else if (request.action === "updateUrlSettings") {
-        urlSettings[request.url] = request.settings;
-        chrome.storage.local.set({ urlSettings: urlSettings });
-        console.log('Updated settings for', request.url, request.settings);
-        
-        if (request.settings.action === 'ignore' && trackedUrls[request.url]) {
-            delete trackedUrls[request.url];
-            chrome.storage.local.set({ trackedUrls: trackedUrls });
-        }
-        
-        if (currentUrl === request.url && request.settings.action === 'ignore') {
-            startTime = null;
-        }
-        
-        sendResponse({ success: true });
-        return true;
-    }
-});
-
-function checkTimeLimits() {
-    chrome.storage.local.get(['trackedUrls', 'urlSettings'], (result) => {
-        const trackedUrls = result.trackedUrls || {};
-        const urlSettings = result.urlSettings || {};
-
-        for (const [url, timeSpent] of Object.entries(trackedUrls)) {
-            const setting = urlSettings[url];
-            if (setting && setting.action === 'time-limit' && setting.timeLimit) {
-                if (timeSpent >= setting.timeLimit) {
-                    chrome.tabs.query({url: `*://${url}/*`}, (tabs) => {
-                        tabs.forEach((tab) => {
-                            chrome.tabs.update(tab.id, {url: 'blocked.html'});
-                        });
-                    });
-                }
-            }
-        }
-    });
+// Start the interval when the background script loads
+if (!intervalId) {
+  intervalId = setInterval(updateTimeSpent, 1000);
 }
-
-// Call checkTimeLimits every minute
-setInterval(checkTimeLimits, 60000);

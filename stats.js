@@ -161,6 +161,9 @@ function updateUrlSettings(url, action) {
             } else {
                 urlSettings[url].action = 'none';
             }
+        } else {
+            // If the action is not 'time-limit', remove any existing time limit
+            delete urlSettings[url].timeLimit;
         }
 
         chrome.storage.local.set({ urlSettings: urlSettings }, () => {
