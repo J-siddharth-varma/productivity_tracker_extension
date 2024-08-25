@@ -1,5 +1,6 @@
 let pieChart = null;
 let barChart = null;
+let deletionQueue = [];
 
 function updateStatsPage() {
     chrome.storage.local.get(['trackedUrls', 'urlSettings'], function(result) {
@@ -125,26 +126,58 @@ function populateTable(labels, urlSettings, trackedUrls) {
 function deleteWebsite(url) {
     console.log('Attempting to delete:', url);
     if (confirm(`Are you sure you want to delete ${url} from the tracking list?`)) {
-        chrome.storage.local.get(['trackedUrls', 'urlSettings'], function(result) {
-            console.log('Current storage before deletion:', result);
-            let trackedUrls = result.trackedUrls || {};
-            let urlSettings = result.urlSettings || {};
+        deletionQueue.push(url);
+        // Remove the row from the table immediately for visual feedback
+        removeTableRow(url);
+        // Process the deletion queue
+        processDeletionQueue();
+    }
+}
 
+function removeTableRow(url) {
+    const tableBody = document.querySelector('#statsTable tbody');
+    const rows = tableBody.querySelectorAll('tr');
+    rows.forEach((row) => {
+        if (row.cells[1].textContent === url) {
+            row.remove();
+        }
+    });
+}
+
+function processDeletionQueue() {
+    if (deletionQueue.length === 0) {
+        return;
+    }
+
+    chrome.storage.local.get(['trackedUrls', 'urlSettings'], function(result) {
+        console.log('Current storage before deletion:', result);
+        let trackedUrls = result.trackedUrls || {};
+        let urlSettings = result.urlSettings || {};
+
+        deletionQueue.forEach(url => {
             delete trackedUrls[url];
             delete urlSettings[url];
+        });
 
-            console.log('Updated trackedUrls:', trackedUrls);
-            console.log('Updated urlSettings:', urlSettings);
+        console.log('Updated trackedUrls:', trackedUrls);
+        console.log('Updated urlSettings:', urlSettings);
 
-            chrome.storage.local.set({ trackedUrls: trackedUrls, urlSettings: urlSettings }, function() {
-                console.log('Storage updated after deletion');
-                chrome.storage.local.get(['trackedUrls', 'urlSettings'], function(updatedResult) {
-                    console.log('Verified storage after deletion:', updatedResult);
-                    updateStatsPage();
-                });
+        chrome.storage.local.set({ trackedUrls: trackedUrls, urlSettings: urlSettings }, function() {
+            console.log('Storage updated after deletion');
+            chrome.storage.local.get(['trackedUrls', 'urlSettings'], function(updatedResult) {
+                console.log('Verified storage after deletion:', updatedResult);
+                // Clear the deletion queue
+                deletionQueue = [];
+                // Update the charts without refreshing the entire page
+                updateCharts(Object.keys(trackedUrls), Object.values(trackedUrls));
             });
         });
-    }
+    });
+}
+
+function updateCharts(labels, data) {
+    createPieChart(labels, data);
+    createBarChart(labels, data);
 }
 
 function updateUrlSettings(url, action) {
