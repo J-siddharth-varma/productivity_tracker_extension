@@ -47,7 +47,7 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
     try {
       const url = new URL(tab.url);
       currentUrl = url.hostname;
-      console.log("Current URL set to:", currentUrl); // Debug log
+      console.log("Current URL set to:", currentUrl);
       startTime = Date.now();
     } catch (error) {
       console.error("Invalid URL:", tab.url);

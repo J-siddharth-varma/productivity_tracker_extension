@@ -1,27 +1,30 @@
-function formatTime(seconds) {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const remainingSeconds = seconds % 60;
-    return `${hours}h ${minutes}m ${remainingSeconds}s`;
-}
+let pieChart = null;
+let barChart = null;
 
 function updateStatsPage() {
     chrome.storage.local.get(['trackedUrls', 'urlSettings'], function(result) {
+        console.log('Retrieved data:', result);
         const trackedUrls = result.trackedUrls || {};
         const urlSettings = result.urlSettings || {};
         
         const labels = Object.keys(trackedUrls);
         const data = Object.values(trackedUrls);
         
+        console.log('Labels:', labels);
+        console.log('Data:', data);
+
         createPieChart(labels, data);
         createBarChart(labels, data);
-        populateTable(labels, urlSettings);
+        populateTable(labels, urlSettings, trackedUrls);
     });
 }
 
 function createPieChart(labels, data) {
     const ctx = document.getElementById('pieChart').getContext('2d');
-    new Chart(ctx, {
+    if (pieChart) {
+        pieChart.destroy();
+    }
+    pieChart = new Chart(ctx, {
         type: 'pie',
         data: {
             labels: labels,
@@ -35,38 +38,24 @@ function createPieChart(labels, data) {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'top',
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const label = context.label || '';
-                            const value = context.raw || 0;
-                            return `${label}: ${formatTime(value)}`;
-                        }
-                    }
-                }
-            }
+            maintainAspectRatio: false
         }
     });
 }
 
 function createBarChart(labels, data) {
     const ctx = document.getElementById('barChart').getContext('2d');
-    new Chart(ctx, {
+    if (barChart) {
+        barChart.destroy();
+    }
+    barChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
             datasets: [{
                 label: 'Time Spent',
                 data: data,
-                backgroundColor: [
-                    '#9b59b6', '#e74c3c', '#f1c40f', '#2ecc71', '#3498db',
-                    '#1abc9c', '#34495e', '#16a085', '#27ae60', '#2980b9'
-                ]
+                backgroundColor: '#3498db'
             }]
         },
         options: {
@@ -83,13 +72,10 @@ function createBarChart(labels, data) {
                 }
             },
             plugins: {
-                legend: {
-                    display: false
-                },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return `Time Spent: ${formatTime(context.raw)}`;
+                            return 'Time Spent: ' + formatTime(context.raw);
                         }
                     }
                 }
@@ -98,7 +84,14 @@ function createBarChart(labels, data) {
     });
 }
 
-function populateTable(labels, urlSettings) {
+function formatTime(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours}h ${minutes}m ${secs}s`;
+}
+
+function populateTable(labels, urlSettings, trackedUrls) {
     const tableBody = document.querySelector('#statsTable tbody');
     tableBody.innerHTML = '';
 
@@ -130,17 +123,25 @@ function populateTable(labels, urlSettings) {
 }
 
 function deleteWebsite(url) {
+    console.log('Attempting to delete:', url);
     if (confirm(`Are you sure you want to delete ${url} from the tracking list?`)) {
         chrome.storage.local.get(['trackedUrls', 'urlSettings'], function(result) {
+            console.log('Current storage before deletion:', result);
             let trackedUrls = result.trackedUrls || {};
             let urlSettings = result.urlSettings || {};
 
             delete trackedUrls[url];
             delete urlSettings[url];
 
+            console.log('Updated trackedUrls:', trackedUrls);
+            console.log('Updated urlSettings:', urlSettings);
+
             chrome.storage.local.set({ trackedUrls: trackedUrls, urlSettings: urlSettings }, function() {
-                console.log('Website deleted:', url);
-                updateStatsPage();
+                console.log('Storage updated after deletion');
+                chrome.storage.local.get(['trackedUrls', 'urlSettings'], function(updatedResult) {
+                    console.log('Verified storage after deletion:', updatedResult);
+                    updateStatsPage();
+                });
             });
         });
     }
