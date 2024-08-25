@@ -8,8 +8,11 @@ function updateStatsPage() {
         const trackedUrls = result.trackedUrls || {};
         const urlSettings = result.urlSettings || {};
         
-        const labels = Object.keys(trackedUrls);
-        const data = Object.values(trackedUrls);
+        // Filter out invalid entries
+        const validUrls = Object.keys(trackedUrls).filter(url => url && url !== 'null' && url !== 'undefined');
+        
+        const labels = validUrls;
+        const data = validUrls.map(url => trackedUrls[url]);
         
         console.log('Labels:', labels);
         console.log('Data:', data);
@@ -150,8 +153,10 @@ function updateCharts(labels, data) {
 }
 
 function updateUrlSettings(url, action) {
-    chrome.storage.local.get(['urlSettings'], (result) => {
+    chrome.storage.local.get(['urlSettings', 'trackedUrls'], (result) => {
         let urlSettings = result.urlSettings || {};
+        let trackedUrls = result.trackedUrls || {};
+
         urlSettings[url] = { action: action };
         
         if (action === 'time-limit') {
@@ -161,12 +166,17 @@ function updateUrlSettings(url, action) {
             } else {
                 urlSettings[url].action = 'none';
             }
-        } else {
-            // If the action is not 'time-limit', remove any existing time limit
-            delete urlSettings[url].timeLimit;
+        } else if (action === 'ignore') {
+            // If ignoring, keep the tracked time but mark it as ignored
+            if (!trackedUrls.hasOwnProperty(url)) {
+                trackedUrls[url] = 0;
+            }
+        } else if (action === 'none' && urlSettings[url].action === 'ignore') {
+            // If un-ignoring, reset the tracked time to 0
+            trackedUrls[url] = 0;
         }
 
-        chrome.storage.local.set({ urlSettings: urlSettings }, () => {
+        chrome.storage.local.set({ urlSettings: urlSettings, trackedUrls: trackedUrls }, () => {
             console.log('Settings updated for', url);
             updateStatsPage();
         });
@@ -195,15 +205,14 @@ function populateTable(labels, urlSettings, trackedUrls) {
         });
         limitationCell.appendChild(select);
 
-        // Display current limitation
-        const limitationInfo = document.createElement('span');
-        limitationInfo.style.marginLeft = '10px';
-        if (urlSettings[url]?.action === 'time-limit' && urlSettings[url]?.timeLimit) {
-            limitationInfo.textContent = `(${formatTime(urlSettings[url].timeLimit)})`;
+        const timeCell = row.insertCell(3);
+        if (urlSettings[url]?.action === 'ignore') {
+            timeCell.textContent = 'Ignored';
+        } else {
+            timeCell.textContent = formatTime(trackedUrls[url] || 0);
         }
-        limitationCell.appendChild(limitationInfo);
 
-        const deleteCell = row.insertCell(3);
+        const deleteCell = row.insertCell(4);
         const deleteButton = document.createElement('button');
         deleteButton.textContent = 'Delete';
         deleteButton.classList.add('delete-btn');

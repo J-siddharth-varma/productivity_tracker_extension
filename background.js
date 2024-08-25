@@ -14,26 +14,36 @@ chrome.storage.local.get(['trackedUrls', 'urlSettings'], (result) => {
 
 function updateTimeSpent() {
   if (currentUrl) {
-    const now = Date.now();
-    const timeSpent = Math.round((now - startTime) / 1000);
-    trackedUrls[currentUrl] = (trackedUrls[currentUrl] || 0) + timeSpent;
-    startTime = now;  // Reset startTime for the next interval
+    chrome.storage.local.get(['trackedUrls', 'urlSettings'], (result) => {
+      let trackedUrls = result.trackedUrls || {};
+      let urlSettings = result.urlSettings || {};
 
-    chrome.storage.local.set({ trackedUrls: trackedUrls }, () => {
-      if (chrome.runtime.lastError) {
-        console.error('Error updating storage:', chrome.runtime.lastError);
+      // Check if the current URL is being ignored
+      if (urlSettings[currentUrl]?.action !== 'ignore') {
+        const now = Date.now();
+        const timeSpent = Math.round((now - startTime) / 1000);
+        trackedUrls[currentUrl] = (trackedUrls[currentUrl] || 0) + timeSpent;
+        startTime = now;  // Reset startTime for the next interval
+
+        chrome.storage.local.set({ trackedUrls: trackedUrls }, () => {
+          if (chrome.runtime.lastError) {
+            console.error('Error updating storage:', chrome.runtime.lastError);
+          } else {
+            console.log(`Updated time for ${currentUrl}: ${trackedUrls[currentUrl]} seconds`);
+          }
+        });
+
+        // Check if time limit is reached
+        const setting = urlSettings[currentUrl];
+        if (setting && setting.action === 'time-limit' && setting.timeLimit) {
+          if (trackedUrls[currentUrl] >= setting.timeLimit) {
+            blockWebsite(currentUrl);
+          }
+        }
       } else {
-        console.log(`Updated time for ${currentUrl}: ${trackedUrls[currentUrl]} seconds`);
+        console.log(`${currentUrl} is currently ignored`);
       }
     });
-
-    // Check if time limit is reached
-    const setting = urlSettings[currentUrl];
-    if (setting && setting.action === 'time-limit' && setting.timeLimit) {
-      if (trackedUrls[currentUrl] >= setting.timeLimit) {
-        blockWebsite(currentUrl);
-      }
-    }
   }
 }
 
@@ -54,13 +64,28 @@ function unblockWebsite(url) {
 }
 
 function startTracking(url) {
-  if (url !== currentUrl) {
+  if (url && url !== currentUrl) {
     stopTracking();
     currentUrl = url;
     startTime = Date.now();
     console.log('Started tracking:', url);
+
+    // Ensure the URL is added to trackedUrls even if ignored
+    chrome.storage.local.get(['trackedUrls', 'urlSettings'], function(result) {
+      let trackedUrls = result.trackedUrls || {};
+      let urlSettings = result.urlSettings || {};
+      
+      if (!trackedUrls.hasOwnProperty(url)) {
+        trackedUrls[url] = 0;
+      }
+      
+      chrome.storage.local.set({ trackedUrls: trackedUrls }, function() {
+        console.log('Added URL to tracking list:', url);
+      });
+    });
+
     if (!intervalId) {
-      intervalId = setInterval(updateTimeSpent, 1000); // Update every second
+      intervalId = setInterval(updateTimeSpent, 1000);
     }
   }
 }
@@ -165,3 +190,27 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 if (!intervalId) {
   intervalId = setInterval(updateTimeSpent, 1000);
 }
+
+// Add this function to clean up invalid entries
+function cleanupTrackedUrls() {
+  chrome.storage.local.get(['trackedUrls'], function(result) {
+    let trackedUrls = result.trackedUrls || {};
+    let hasChanges = false;
+
+    for (let url in trackedUrls) {
+      if (url === 'null' || url === 'undefined' || !url) {
+        delete trackedUrls[url];
+        hasChanges = true;
+      }
+    }
+
+    if (hasChanges) {
+      chrome.storage.local.set({ trackedUrls: trackedUrls }, function() {
+        console.log('Cleaned up invalid entries in trackedUrls');
+      });
+    }
+  });
+}
+
+// Call cleanupTrackedUrls when the extension starts
+cleanupTrackedUrls();

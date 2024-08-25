@@ -19,11 +19,17 @@ function updateTimer() {
 }
 
 function updateTimerDisplay() {
-    chrome.storage.local.get(['trackedUrls'], function(result) {
+    chrome.storage.local.get(['trackedUrls', 'urlSettings'], function(result) {
         const trackedUrls = result.trackedUrls || {};
-        const timeSpent = trackedUrls[currentUrl] || 0;
+        const urlSettings = result.urlSettings || {};
         const timerElement = document.getElementById('timer');
-        timerElement.textContent = formatTime(timeSpent);
+
+        if (urlSettings[currentUrl]?.action === 'ignore') {
+            timerElement.textContent = 'Ignored';
+        } else {
+            const timeSpent = trackedUrls[currentUrl] || 0;
+            timerElement.textContent = formatTime(timeSpent);
+        }
     });
 }
 
