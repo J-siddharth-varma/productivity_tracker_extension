@@ -34,7 +34,7 @@ function updateTimerDisplay() {
 }
 
 function formatTime(seconds) {
-     const hours = Math.floor(seconds / 3600);
+    const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
     return [hours, minutes, secs]
@@ -47,9 +47,44 @@ document.addEventListener('DOMContentLoaded', function() {
     intervalId = setInterval(updateTimerDisplay, 1000);
 
     document.getElementById('viewStats').addEventListener('click', function() {
+        // Open the detailed statistics page
         chrome.tabs.create({url: 'stats.html'});
     });
+
+    document.getElementById('viewDashboard').addEventListener('click', function() {
+        // Open the dashboard page
+        chrome.tabs.create({url: 'dashboard.html'});
+    });
 });
+
+// Close the modal when the user clicks on <span> (x)
+document.querySelector('.close').addEventListener('click', function() {
+    document.getElementById('statsModal').style.display = 'none';
+});
+
+// Close the modal when the user clicks anywhere outside of the modal
+window.addEventListener('click', function(event) {
+    if (event.target === document.getElementById('statsModal')) {
+        document.getElementById('statsModal').style.display = 'none';
+    }
+});
+
+function populateStatistics() {
+    // Fetch data and populate the charts and usage list
+    const labels = ['www.youtube.com', 'www.sih.gov.in', 'github.com'];
+    const data = [5000, 300, 120]; // Replace with actual data
+    const dates = ['2023-10-01', '2023-10-01', '2023-10-01']; // Replace with actual dates
+
+    updateCharts(labels, data, dates);
+
+    const usageList = document.getElementById('usageList');
+    usageList.innerHTML = ''; // Clear previous entries
+    labels.forEach((label, index) => {
+        const li = document.createElement('li');
+        li.textContent = `${label}: ${data[index]} seconds on ${dates[index]}`;
+        usageList.appendChild(li);
+    });
+}
 
 // Stop the interval when the popup is closed
 window.addEventListener('unload', function() {

@@ -4,7 +4,6 @@ let deletionQueue = [];
 
 function updateStatsPage() {
     chrome.storage.local.get(['trackedUrls', 'urlSettings'], function(result) {
-        console.log('Retrieved data:', result);
         const trackedUrls = result.trackedUrls || {};
         const urlSettings = result.urlSettings || {};
         
@@ -14,9 +13,7 @@ function updateStatsPage() {
         const labels = validUrls;
         const data = validUrls.map(url => trackedUrls[url]);
         
-        console.log('Labels:', labels);
-        console.log('Data:', data);
-
+        // Create charts
         createPieChart(labels, data);
         createBarChart(labels, data);
         populateTable(labels, urlSettings, trackedUrls);
@@ -57,7 +54,7 @@ function createBarChart(labels, data) {
         data: {
             labels: labels,
             datasets: [{
-                label: 'Time Spent',
+                label: 'Time Spent (seconds)',
                 data: data,
                 backgroundColor: '#3498db'
             }]
@@ -67,21 +64,7 @@ function createBarChart(labels, data) {
             maintainAspectRatio: false,
             scales: {
                 y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return formatTime(value);
-                        }
-                    }
-                }
-            },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return 'Time Spent: ' + formatTime(context.raw);
-                        }
-                    }
+                    beginAtZero: true
                 }
             }
         }
@@ -147,9 +130,9 @@ function processDeletionQueue() {
     });
 }
 
-function updateCharts(labels, data) {
+function updateCharts(labels, data, dates) {
     createPieChart(labels, data);
-    createBarChart(labels, data);
+    createBarChart(labels, data, dates);
 }
 
 function updateUrlSettings(url, action) {
@@ -252,4 +235,20 @@ function populateTable(labels, urlSettings, trackedUrls) {
     });
 }
 
-document.addEventListener('DOMContentLoaded', updateStatsPage);
+document.addEventListener('DOMContentLoaded', function() {
+    // Display the current date
+    const currentDateElement = document.getElementById('currentDate');
+    const today = new Date();
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    currentDateElement.textContent = today.toLocaleDateString(undefined, options);
+
+    // Call the function to update the statistics
+    updateStatsPage();
+});
+
+// Example of how to call updateCharts
+const labels = ['www.youtube.com', 'x.com'];
+const data = [62, 2]; // Replace with actual data
+const dates = ['2023-10-01', '2023-10-01']; // Replace with actual dates
+
+updateCharts(labels, data, dates);

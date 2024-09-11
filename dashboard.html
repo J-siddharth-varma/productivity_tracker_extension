@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="dashboard.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="chart.js"></script>
+    <script src="dashboard.js" defer></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Dashboard</h1>
+        <h2 id="websiteName">www.youtube.com</h2>
+        <input type="text" id="dateRange" placeholder="Select Date Range" />
+        <div id="barChartContainer">
+            <canvas id="barChart"></canvas>
+        </div>
+        <div class="stats">
+            <div id="totalTime" class="stat-box">Total time: 0 h 0 m 0 s</div>
+            <div id="sessions" class="stat-box">Sessions: 0</div>
+            <div id="averageUsage" class="stat-box">Average daily usage: 0 h 0 m 0 s</div>
+        </div>
+    </div>
+</body>
+</html>
