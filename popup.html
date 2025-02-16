@@ -1,19 +1,41 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Time Tracker</title>
-    <link rel="stylesheet" href="popup.css">
+    <style>
+        body {
+            width: 200px;
+            padding: 10px;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        h1 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        #timer {
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+    </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Time is Ticking away...</h1>
-        <div id="timer">00:00:00</div>
-        <button class="tab" id="viewStats">View Statistics</button>
-        <button class="tab" id="viewDashboard">Dashboard</button> <!-- New Dashboard Button -->
-    </div>
-
+    <h1>Time Tracker</h1>
+    <div id="timer">00:00:00</div>
+    <button id="viewStats">View Statistics</button>
     <script src="popup.js"></script>
 </body>
 </html>

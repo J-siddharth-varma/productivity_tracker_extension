@@ -25,24 +25,25 @@ h1 {
 
 .chart-container {
     width: 100%;
-    margin-bottom: 40px;
+    max-width: 600px; /* Limit the width of the charts */
+    margin: 0 auto; /* Center the charts */
+    margin-bottom: 40px; /* Add space below each chart */
 }
 
-#barChartContainer {
+#barChartContainer, #pieChartContainer {
     height: 400px;
+    position: relative;
 }
 
-#pieChartContainer {
-    height: 400px;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
+#timeBarGraph {
+    height: 400px; /* Ensure the bar graph has enough height */
+    position: relative;
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
+    margin-top: 40px; /* Add space above the table */
 }
 
 th, td {
@@ -58,6 +59,10 @@ th {
 
 tr:nth-child(even) {
     background-color: #f9f9f9;
+}
+
+tr:hover {
+    background-color: #f1f1f1; /* Highlight row on hover */
 }
 
 select {
@@ -85,4 +90,19 @@ select:focus {
 
 .delete-btn:hover {
     background-color: #c0392b;
+}
+
+.chart-title {
+    text-align: center;
+    font-size: 20px;
+    margin: 10px 0;
+}
+
+#barChartContainer {
+    height: 500px; /* Increase the height of the bar chart */
+    position: relative;
+}
+
+#pieChartContainer {
+    height: 400px; /* Keep the pie chart height as is or adjust if needed */
 }
