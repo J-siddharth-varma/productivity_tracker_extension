@@ -11,6 +11,33 @@ function updateTimer() {
                     currentUrl = hostname;
                     updateTimerDisplay();
                 }
+                
+                // Check and reset daily tracking
+                chrome.storage.local.get(['trackedUrls', 'urlSettings', 'lastResetDate'], function(result) {
+                    const trackedUrls = result.trackedUrls || {};
+                    const urlSettings = result.urlSettings || {};
+                    const lastResetDate = result.lastResetDate || new Date().toDateString();
+                    
+                    // Check if we need to reset (new day)
+                    const today = new Date().toDateString();
+                    if (today !== lastResetDate) {
+                        // Reset all tracked times
+                        for (let url in trackedUrls) {
+                            trackedUrls[url] = 0;
+                        }
+                        // Update the reset date
+                        chrome.storage.local.set({ 
+                            trackedUrls,
+                            lastResetDate: today 
+                        });
+                    }
+                    
+                    // Update time tracking
+                    if (!urlSettings[hostname]?.action === 'ignore') {
+                        trackedUrls[hostname] = (trackedUrls[hostname] || 0) + 1;
+                        chrome.storage.local.set({ trackedUrls });
+                    }
+                });
             } catch (error) {
                 console.error("Invalid URL:", tabs[0].url);
             }
@@ -44,7 +71,7 @@ function formatTime(seconds) {
 
 document.addEventListener('DOMContentLoaded', function() {
     updateTimer();
-    intervalId = setInterval(updateTimerDisplay, 1000);
+    intervalId = setInterval(updateTimer, 1000);
 
     document.getElementById('viewStats').addEventListener('click', function() {
         chrome.tabs.create({url: 'stats.html'});

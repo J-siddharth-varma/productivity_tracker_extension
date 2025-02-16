@@ -252,4 +252,23 @@ function populateTable(labels, urlSettings, trackedUrls) {
     });
 }
 
-document.addEventListener('DOMContentLoaded', updateStatsPage);
+document.addEventListener('DOMContentLoaded', function() {
+    updateStatsPage();
+
+    // Add clear all functionality
+    document.getElementById('clearAllStats').addEventListener('click', function() {
+        if (confirm('Are you sure you want to clear all tracking statistics? This cannot be undone.')) {
+            chrome.storage.local.get(['urlSettings'], function(result) {
+                chrome.storage.local.set({ 
+                    trackedUrls: {},
+                    lastResetDate: new Date().toDateString(),
+                    // Preserve urlSettings structure but clear all tracked data
+                    urlSettings: {},
+                }, function() {
+                    // Refresh the stats display
+                    displayStats();
+                });
+            });
+        }
+    });
+});
